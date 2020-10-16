@@ -18,3 +18,9 @@ source .venv/bin/activate
 ```
 pip install -r requirements.txt
 ```
+
+## Todo:
+
+- Enable photo transparency
+- Create Size range for animal images
+- Create position range for animal images, based on image format.
