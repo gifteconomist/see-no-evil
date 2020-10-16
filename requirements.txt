@@ -1,0 +1,4 @@
+magickwand==0.2
+PyPDF2==1.26.0
+IPython==7.16.1
+docx2pdf==0.1.7
