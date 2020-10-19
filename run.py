@@ -11,14 +11,14 @@ from docx2pdf import convert
 
 
 def mergePdf():
-    filenames = sorted([f for f in os.listdir(final_dir) if os.path.isfile(os.path.join(final_dir, f))])
+    filenames = [f for f in os.listdir(final_dir) if os.path.isfile(os.path.join(final_dir, f))]
 
     merger = PdfFileMerger()
 
-    for filename in filenames:
-        merge_path = '{directory}/{filename}'.format(
+    for i, filename in enumerate(filenames):
+        merge_path = '{directory}/{index}.pdf'.format(
             directory=final_dir,
-            filename=filename)
+            index=i)
         merger.append(merge_path)
 
     merger.write("document-output.pdf")
@@ -50,7 +50,7 @@ def splitPDF(file_name, output_dir=None):
             output.write(outputStream)
 
 def pdfToJpg(pdf_file, save_as):
-    with(wImage(filename=pdf_file, resolution=300)) as img: 
+    with(wImage(filename=pdf_file, resolution=450)) as img: 
         with img.convert('png') as converted:
             converted.save(filename=f'{save_as}.png')
 
@@ -66,32 +66,35 @@ def PngImageClasstoImageClass(image):
 
 
 def combineAssets(temp_dir):
-    temp_pdf_paths = sorted([f for f in os.listdir(temp_dir) if os.path.isfile(os.path.join(temp_dir, f))])
+    temp_pdf_paths = [f for f in os.listdir(temp_dir) if os.path.isfile(os.path.join(temp_dir, f))]
     all_imgs_paths = [f for f in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, f))]
 
-    for i, page in enumerate(temp_pdf_paths):
-        rand_num = random.randint(0, len(all_imgs_paths))
-        rand_animal = all_imgs_paths[rand_num - 1]
-        page_path = '{temp_dir}/{page}'.format(
-          page=page,
-          temp_dir=temp_dir)
+    all_imgs_paths = [f for f in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, f))]
+    all_pdf_paths = ['{temp_dir}/{index}'.format(temp_dir=temp_dir, index=i) for i in [*range(len(temp_pdf_paths))]][:len(all_imgs_paths)]
+    scrambled_arr = scrambled([*range(len(all_imgs_paths))])
+    
+    for i, page in enumerate(all_pdf_paths):
+        rand_animal = all_imgs_paths[scrambled_arr[i]]
 
-        new_page_path = '{temp_dir}/{i}'.format(temp_dir=temp_dir, i=i)
-        convert_page = pdfToJpg(page_path, save_as=new_page_path)
+        page_path = f'{page}.pdf'
+
         
-        page_img = Image.open(f'{new_page_path}.png')
+        pdfToJpg(page_path, save_as=page)
+        
+        page_img = Image.open(f'{page}.png')
         page_img = page_img.convert('RGBA')
         animal_img = Image.open('{dir}/{animal}'.format(
           dir=img_dir,
           animal=rand_animal))
-        # animal_img = animal_img.resize((page_img.size[0], page_img.size[1]))
+        animal_img = animal_img.resize((page_img.size[0], page_img.size[1]))
         
         final_path = '{final_dir}/{i}'.format(final_dir=final_dir, i=i)
         rand_1 = random.randint(0, 1000)
         rand_2 = random.randint(0, 1000)
         box = (rand_1, rand_2)
+        box = (0, 0)
         page_img.paste(animal_img, box=box, mask=animal_img)
-        
+
         page_img = page_img.convert('RGB')
         page_img.save(f'{final_path}.pdf')
 
