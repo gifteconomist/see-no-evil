@@ -1,3 +1,5 @@
 final/
 temp/
 .venv/
+**/.DS_Store
+document_output.pdf
