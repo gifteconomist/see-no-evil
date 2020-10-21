@@ -2,13 +2,13 @@ import os
 import random
 import shutil
 import numpy
+import json
 
 from IPython import embed
 from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
 from PIL import Image
 from wand.image import Image as wImage
 from docx2pdf import convert
-
 
 def mergePdf():
     filenames = [f for f in os.listdir(final_dir) if os.path.isfile(os.path.join(final_dir, f))]
@@ -21,7 +21,11 @@ def mergePdf():
             index=i)
         merger.append(merge_path)
 
-    merger.write("document-output.pdf")
+    final_doc_name = 'see-no-evil'
+    final_doc_path = '{final_dir}/{name}.pdf'.format(
+      final_dir=final_dir,
+      name=final_doc_name)
+    merger.write(final_doc_path)
     merger.close()
 
 
@@ -65,7 +69,18 @@ def PngImageClasstoImageClass(image):
     return img
 
 
-def combineAssets(temp_dir):
+def makePngTransparent(img, opacity_level = 170):
+    datas = img.getdata()
+
+    newData = []
+    for item in datas:
+        newData.append((0, 0, 0, opacity_level))
+
+    img.putdata(newData)
+
+    return img
+
+def combineAssets(temp_dir, img_dir, opacity):
     temp_pdf_paths = [f for f in os.listdir(temp_dir) if os.path.isfile(os.path.join(temp_dir, f))]
     all_imgs_paths = [f for f in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, f))]
 
@@ -87,27 +102,36 @@ def combineAssets(temp_dir):
           dir=img_dir,
           animal=rand_animal))
         animal_img = animal_img.resize((page_img.size[0], page_img.size[1]))
-        
+
+        if animal_img.mode != 'RGBA':
+            alpha = Image.new('L', animal_img.size, 255)
+            animal_img.putalpha(alpha)
+
+        paste_mark = animal_img.split()[3].point(lambda i: i * opacity / 100.)
+
         final_path = '{final_dir}/{i}'.format(final_dir=final_dir, i=i)
-        rand_1 = random.randint(0, 1000)
-        rand_2 = random.randint(0, 1000)
-        box = (rand_1, rand_2)
+
         box = (0, 0)
-        page_img.paste(animal_img, box=box, mask=animal_img)
+        page_img.paste(animal_img, box=box, mask=paste_mark)
 
         page_img = page_img.convert('RGB')
         page_img.save(f'{final_path}.pdf')
 
 
-source_name = 'Adrianne-WHOLETEXT9'
-text_docx = f'source/{source_name}.docx'
-text_pdf = f'source/{source_name}.pdf'
 temp_pdf_dir = 'temp'
-img_dir = 'images'
 final_dir = 'final'
 
-
 def __main__():
+    opacity = None
+    image_dir = None
+    text_pdf = None
+    
+    with open('parameters.json') as f:
+        parameters = json.load(f)
+        opacity = parameters.get('opacity')
+        image_dir = parameters.get('image_dir')
+        text_pdf = parameters.get('text_pdf')
+
     get_temp_dir = None
 
     if os.path.exists(temp_pdf_dir):
@@ -123,7 +147,10 @@ def __main__():
         os.mkdir(final_dir)
 
     splitPDF(text_pdf, temp_pdf_dir)
-    combineAssets(temp_pdf_dir)
+    combineAssets(
+      temp_dir=temp_pdf_dir,
+      img_dir=image_dir,
+      opacity=opacity)
     mergePdf()
 
 
