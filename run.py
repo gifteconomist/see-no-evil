@@ -86,35 +86,42 @@ def combineAssets(temp_dir, img_dir, opacity):
 
     all_imgs_paths = [f for f in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, f))]
     all_pdf_paths = ['{temp_dir}/{index}'.format(temp_dir=temp_dir, index=i) for i in [*range(len(temp_pdf_paths))]][:len(all_imgs_paths)]
-    scrambled_arr = scrambled([*range(len(all_imgs_paths))])
+
+    arr_img_indexes = [*range(len(all_imgs_paths))]
+    if len(temp_pdf_paths) > len(all_imgs_paths):
+        arr_img_indexes = arr_img_indexes + ['blank' for x in range(len(temp_pdf_paths) - len(all_imgs_paths))]
+    scrambled_arr = scrambled(arr_img_indexes)
     
     for i, page in enumerate(all_pdf_paths):
-        rand_animal = all_imgs_paths[scrambled_arr[i]]
+        animal_index = scrambled_arr[i]
 
-        page_path = f'{page}.pdf'
-
-        
+        # convert page to png, open it up, and make rgba
+        page_path = f'{page}.pdf'        
         pdfToJpg(page_path, save_as=page)
-        
         page_img = Image.open(f'{page}.png')
         page_img = page_img.convert('RGBA')
-        animal_img = Image.open('{dir}/{animal}'.format(
-          dir=img_dir,
-          animal=rand_animal))
-        animal_img = animal_img.resize((page_img.size[0], page_img.size[1]))
 
-        if animal_img.mode != 'RGBA':
-            alpha = Image.new('L', animal_img.size, 255)
-            animal_img.putalpha(alpha)
+        if animal_index != 'blank':
+            # get image and paste it onto page img
+            rand_animal = all_imgs_paths[animal_index]
 
-        paste_mark = animal_img.split()[3].point(lambda i: i * opacity / 100.)
+            animal_img = Image.open('{dir}/{animal}'.format(
+              dir=img_dir,
+              animal=rand_animal))
+            animal_img = animal_img.resize((page_img.size[0], page_img.size[1]))
 
-        final_path = '{final_dir}/{i}'.format(final_dir=final_dir, i=i)
+            if animal_img.mode != 'RGBA':
+                alpha = Image.new('L', animal_img.size, 255)
+                animal_img.putalpha(alpha)
 
-        box = (0, 0)
-        page_img.paste(animal_img, box=box, mask=paste_mark)
+            paste_mark = animal_img.split()[3].point(lambda i: i * opacity / 100.)
+            box = (0, 0)
+            page_img.paste(animal_img, box=box, mask=paste_mark)
 
+        else:
+            print('blank', i)
         page_img = page_img.convert('RGB')
+        final_path = '{final_dir}/{i}'.format(final_dir=final_dir, i=i)
         page_img.save(f'{final_path}.pdf')
 
 
