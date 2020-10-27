@@ -10,6 +10,7 @@ from PIL import Image
 from wand.image import Image as wImage
 from docx2pdf import convert
 
+
 def mergePdf():
     filenames = [f for f in os.listdir(final_dir) if os.path.isfile(os.path.join(final_dir, f))]
 
@@ -82,11 +83,10 @@ def makePngTransparent(img, opacity_level = 170):
 
 def combineAssets(temp_dir, img_dir, opacity):
     temp_pdf_paths = [f for f in os.listdir(temp_dir) if os.path.isfile(os.path.join(temp_dir, f))]
-    all_imgs_paths = [f for f in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, f))]
+    all_imgs_paths = [f for f in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, f)) and '.png' in f]
 
-    all_imgs_paths = [f for f in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, f))]
-    all_pdf_paths = ['{temp_dir}/{index}'.format(temp_dir=temp_dir, index=i) for i in [*range(len(temp_pdf_paths))]][:len(all_imgs_paths)]
-
+    all_pdf_paths = ['{temp_dir}/{index}'.format(temp_dir=temp_dir, index=i) for i in [*range(len(temp_pdf_paths))]]
+    # [:len(all_imgs_paths)]
     arr_img_indexes = [*range(len(all_imgs_paths))]
     if len(temp_pdf_paths) > len(all_imgs_paths):
         arr_img_indexes = arr_img_indexes + ['blank' for x in range(len(temp_pdf_paths) - len(all_imgs_paths))]
@@ -108,7 +108,7 @@ def combineAssets(temp_dir, img_dir, opacity):
             animal_img = Image.open('{dir}/{animal}'.format(
               dir=img_dir,
               animal=rand_animal))
-            animal_img = animal_img.resize((page_img.size[0], page_img.size[1]))
+            animal_img = animal_img.resize((page_img.size[0], page_img.size[1]), resample=Image.LANCZOS)
 
             if animal_img.mode != 'RGBA':
                 alpha = Image.new('L', animal_img.size, 255)
@@ -121,8 +121,9 @@ def combineAssets(temp_dir, img_dir, opacity):
         else:
             print('blank', i)
         page_img = page_img.convert('RGB')
+        page_img = page_img.resize((2550, 3300), resample=Image.LANCZOS)
         final_path = '{final_dir}/{i}'.format(final_dir=final_dir, i=i)
-        page_img.save(f'{final_path}.pdf')
+        page_img.save(f'{final_path}.pdf', resolution=300.0, optimize=True)
 
 
 temp_pdf_dir = 'temp'
