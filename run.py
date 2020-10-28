@@ -3,6 +3,7 @@ import random
 import shutil
 import numpy
 import json
+import sys
 
 from IPython import embed
 from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
@@ -134,12 +135,22 @@ def __main__():
     image_dir = None
     text_pdf = None
     
+    # get parameters from json
     with open('parameters.json') as f:
         parameters = json.load(f)
         opacity = parameters.get('opacity')
         image_dir = parameters.get('image_dir')
         text_pdf = parameters.get('text_pdf')
 
+    # see if opacity was passed via cmd line
+    passed_args = sys.argv
+    if (len(passed_args) > 1):
+        try:
+            opacity = int(passed_args[len(passed_args) - 1])
+        except Exception as e:
+            print('Exception:', e)
+
+    print(f'An opacity of {opacity} has been set.')
     get_temp_dir = None
 
     if os.path.exists(temp_pdf_dir):
