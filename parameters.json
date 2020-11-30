@@ -1,5 +1,8 @@
 {
-  "opacity": 80,
+  "opacity": 97,
   "image_dir": "images",
-  "text_pdf": "text/Adrianne-WHOLETEXT9.pdf"
+  "text_pdf": "text/WHOLETEXT11.pdf",
+  "page_width": 8.75,
+  "page_height": 11.25,
+  "dpi": 300
 }

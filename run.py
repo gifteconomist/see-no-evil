@@ -82,19 +82,44 @@ def makePngTransparent(img, opacity_level = 170):
 
     return img
 
-def combineAssets(temp_dir, img_dir, opacity):
+  
+def sortImgArrByHand(arr, startIndex=0):
+    '''
+    If startIndex is 0 (or even number), assume 0 index is lefthand side.
+    If startIndex is 1 (or odd number), assume 0 index is righthand side, 
+    '''
+    def is_even(num):
+      return (num % 2) == 0
+
+    def on_left_side(index):
+        return is_even(index) if is_even(startIndex) else not is_even(index)
+
+    def swap_arr_element(array, index):
+        array[index], array[index + 1] = array[index + 1], array[index]
+
+    for i, a in enumerate(arr):
+        if a[1].startswith('l-') or a[1].startswith('L-') and not on_left_side(i):
+            swap_arr_element(arr, i)
+        if a[1].startswith('r-') or a[1].startswith('R-') and on_left_side(i):
+            swap_arr_element(arr, i)
+            
+    return arr
+
+def combineAssets(temp_dir, img_dir, opacity, page_width, page_height, dpi):
     temp_pdf_paths = [f for f in os.listdir(temp_dir) if os.path.isfile(os.path.join(temp_dir, f))]
     all_imgs_paths = [f for f in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, f)) and '.png' in f]
 
     all_pdf_paths = ['{temp_dir}/{index}'.format(temp_dir=temp_dir, index=i) for i in [*range(len(temp_pdf_paths))]]
     # [:len(all_imgs_paths)]
-    arr_img_indexes = [*range(len(all_imgs_paths))]
+    arr_img_indexes = [(i, all_imgs_paths[i]) for i in [*range(len(all_imgs_paths))]]
+
     if len(temp_pdf_paths) > len(all_imgs_paths):
-        arr_img_indexes = arr_img_indexes + ['blank' for x in range(len(temp_pdf_paths) - len(all_imgs_paths))]
-    scrambled_arr = scrambled(arr_img_indexes)
+        arr_img_indexes = arr_img_indexes + [(i + len(arr_img_indexes), 'blank') for i, x in enumerate(range(len(temp_pdf_paths) - len(all_imgs_paths)))]
     
+    scrambled_arr = scrambled(arr_img_indexes)
+    scrambled_arr = sortImgArrByHand(scrambled_arr)
     for i, page in enumerate(all_pdf_paths):
-        animal_index = scrambled_arr[i]
+        animal_index = scrambled_arr[i][0]
 
         # convert page to png, open it up, and make rgba
         page_path = f'{page}.pdf'        
@@ -102,9 +127,10 @@ def combineAssets(temp_dir, img_dir, opacity):
         page_img = Image.open(f'{page}.png')
         page_img = page_img.convert('RGBA')
 
-        if animal_index != 'blank':
+        if arr_img_indexes[animal_index][1] != 'blank':
+            
             # get image and paste it onto page img
-            rand_animal = all_imgs_paths[animal_index]
+            rand_animal = arr_img_indexes[animal_index][1]
 
             animal_img = Image.open('{dir}/{animal}'.format(
               dir=img_dir,
@@ -122,9 +148,9 @@ def combineAssets(temp_dir, img_dir, opacity):
         else:
             print('blank', i)
         page_img = page_img.convert('RGB')
-        page_img = page_img.resize((2550, 3300), resample=Image.LANCZOS)
+        page_img = page_img.resize((page_width, page_height), resample=Image.LANCZOS)
         final_path = '{final_dir}/{i}'.format(final_dir=final_dir, i=i)
-        page_img.save(f'{final_path}.pdf', resolution=300.0, optimize=True)
+        page_img.save(f'{final_path}.pdf', resolution=dpi, optimize=True)
 
 
 temp_pdf_dir = 'temp'
@@ -134,6 +160,9 @@ def __main__():
     opacity = None
     image_dir = None
     text_pdf = None
+    page_width = 8.75
+    page_height = 11.25
+    dpi = 300
     
     # get parameters from json
     with open('parameters.json') as f:
@@ -141,6 +170,13 @@ def __main__():
         opacity = parameters.get('opacity')
         image_dir = parameters.get('image_dir')
         text_pdf = parameters.get('text_pdf')
+        page_width = parameters.get('page_width')
+        page_height = parameters.get('page_height')
+        dpi = parameters.get('dpi')
+
+    # px / dpi = inches
+    page_pixel_w = int(page_width * dpi)
+    page_pixel_h = int(page_height * dpi)
 
     # see if opacity was passed via cmd line
     passed_args = sys.argv
@@ -169,7 +205,10 @@ def __main__():
     combineAssets(
       temp_dir=temp_pdf_dir,
       img_dir=image_dir,
-      opacity=opacity)
+      opacity=opacity,
+      page_width=page_pixel_w,
+      page_height=page_pixel_h,
+      dpi=dpi)
     mergePdf()
 
 
