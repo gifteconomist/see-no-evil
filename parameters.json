@@ -4,5 +4,6 @@
   "text_pdf": "text/WHOLETEXT11.pdf",
   "page_width": 8.75,
   "page_height": 11.25,
-  "dpi": 300
+  "dpi": 300,
+  "start_hand": "left"
 }

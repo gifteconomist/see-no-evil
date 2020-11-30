@@ -94,6 +94,7 @@ The following features of the project are configurable:
  - The page height of the final pdf
  - The page width of the final pdf
  - The resolution of the final pdf
+ - Whether the beginning of the text with images should begin on the right-hand or left-hand page.
 
 The configurations for the project are exposed in the `parameter.json` file located in the project directory's root.
 

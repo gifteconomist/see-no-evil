@@ -71,6 +71,16 @@ def PngImageClasstoImageClass(image):
     return img
 
 
+def defineHandedness(start_hand):
+    if start_hand == 'right' or start_hand == 'r' or start_hand == 'R':
+        start_index = 1
+    elif start_hand == 'left' or start_hand == 'l' or start_hand == 'L':
+        start_index = 0
+    else:
+        print('Start handedness not specified.')
+
+    return start_index
+
 def makePngTransparent(img, opacity_level = 170):
     datas = img.getdata()
 
@@ -83,16 +93,17 @@ def makePngTransparent(img, opacity_level = 170):
     return img
 
   
-def sortImgArrByHand(arr, startIndex=0):
+def sortImgArrByHand(arr, start_index):
     '''
-    If startIndex is 0 (or even number), assume 0 index is lefthand side.
-    If startIndex is 1 (or odd number), assume 0 index is righthand side, 
+    If start_index is 0 (or even number), assume 0 index is lefthand side.
+    If start_index is 1 (or odd number), assume 0 index is righthand side, 
     '''
+    print('start index', start_index)
     def is_even(num):
       return (num % 2) == 0
 
     def on_left_side(index):
-        return is_even(index) if is_even(startIndex) else not is_even(index)
+        return is_even(index) if is_even(start_index) else not is_even(index)
 
     def swap_arr_element(array, index):
         array[index], array[index + 1] = array[index + 1], array[index]
@@ -100,12 +111,14 @@ def sortImgArrByHand(arr, startIndex=0):
     for i, a in enumerate(arr):
         if a[1].startswith('l-') or a[1].startswith('L-') and not on_left_side(i):
             swap_arr_element(arr, i)
+            # print('Swap', a[1], i, i+1)
         if a[1].startswith('r-') or a[1].startswith('R-') and on_left_side(i):
             swap_arr_element(arr, i)
+            # print('Swap', a[1], i, i+1)
             
     return arr
 
-def combineAssets(temp_dir, img_dir, opacity, page_width, page_height, dpi):
+def combineAssets(temp_dir, img_dir, opacity, page_width, page_height, dpi, start_index):
     temp_pdf_paths = [f for f in os.listdir(temp_dir) if os.path.isfile(os.path.join(temp_dir, f))]
     all_imgs_paths = [f for f in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, f)) and '.png' in f]
 
@@ -117,7 +130,7 @@ def combineAssets(temp_dir, img_dir, opacity, page_width, page_height, dpi):
         arr_img_indexes = arr_img_indexes + [(i + len(arr_img_indexes), 'blank') for i, x in enumerate(range(len(temp_pdf_paths) - len(all_imgs_paths)))]
     
     scrambled_arr = scrambled(arr_img_indexes)
-    scrambled_arr = sortImgArrByHand(scrambled_arr)
+    scrambled_arr = sortImgArrByHand(scrambled_arr, start_index=start_index)
     for i, page in enumerate(all_pdf_paths):
         animal_index = scrambled_arr[i][0]
 
@@ -163,6 +176,7 @@ def __main__():
     page_width = 8.75
     page_height = 11.25
     dpi = 300
+    start_hand = "right"
     
     # get parameters from json
     with open('parameters.json') as f:
@@ -173,10 +187,13 @@ def __main__():
         page_width = parameters.get('page_width')
         page_height = parameters.get('page_height')
         dpi = parameters.get('dpi')
+        start_hand = parameters.get('start_hand')
 
     # px / dpi = inches
     page_pixel_w = int(page_width * dpi)
     page_pixel_h = int(page_height * dpi)
+    
+    start_index = defineHandedness(start_hand)
 
     # see if opacity was passed via cmd line
     passed_args = sys.argv
@@ -208,7 +225,8 @@ def __main__():
       opacity=opacity,
       page_width=page_pixel_w,
       page_height=page_pixel_h,
-      dpi=dpi)
+      dpi=dpi,
+      start_index=start_index)
     mergePdf()
 
 
