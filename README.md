@@ -91,6 +91,9 @@ The following features of the project are configurable:
  - The opacity of the drawing images that overlay on the text
  - The text pdf source
  - The drawing images
+ - The page height of the final pdf
+ - The page width of the final pdf
+ - The resolution of the final pdf
 
 The configurations for the project are exposed in the `parameter.json` file located in the project directory's root.
 
