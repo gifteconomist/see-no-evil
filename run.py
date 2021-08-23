@@ -10,26 +10,28 @@ from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
 from PIL import Image
 from wand.image import Image as wImage
 from docx2pdf import convert
+import time
 
 
 def mergePdf():
-    filenames = [f for f in os.listdir(final_dir) if os.path.isfile(os.path.join(final_dir, f))]
+    filenames = [f for f in os.listdir(f'{temp_pdf_dir}/combine') if os.path.isfile(os.path.join(f'{temp_pdf_dir}/combine', f))]
 
     merger = PdfFileMerger()
 
     for i, filename in enumerate(filenames):
         merge_path = '{directory}/{index}.pdf'.format(
-            directory=final_dir,
+            directory=f'{temp_pdf_dir}/combine',
             index=i)
         merger.append(merge_path)
 
     final_doc_name = 'see-no-evil'
-    final_doc_path = '{final_dir}/{name}.pdf'.format(
+
+    final_doc_path = '{final_dir}/{stamp_date}/{name}.pdf'.format(
       final_dir=final_dir,
+      stamp_date=stamp_date,
       name=final_doc_name)
     merger.write(final_doc_path)
     merger.close()
-
 
 def scrambled(orig):
     dest = orig[:]
@@ -93,28 +95,49 @@ def makePngTransparent(img, opacity_level = 170):
     return img
 
   
-def sortImgArrByHand(arr, start_index):
+def sortImgArrByHand(arr = list, start_index = int):
     '''
     If start_index is 0 (or even number), assume 0 index is lefthand side.
     If start_index is 1 (or odd number), assume 0 index is righthand side, 
     '''
     print('start index', start_index)
+    # print('look at array len', len(arr))
+    # print('look at array', arr)
     def is_even(num):
       return (num % 2) == 0
 
     def on_left_side(index):
         return is_even(index) if is_even(start_index) else not is_even(index)
 
-    def swap_arr_element(array, index):
-        array[index], array[index + 1] = array[index + 1], array[index]
+    def is_left_handed(a_item):
+        return a_item[1].startswith('l-') or a_item[1].startswith('L-')
+
+    def is_right_handed(a_item):
+      return a_item[1].startswith('r-') or a_item[1].startswith('R-')
+
+    def swap_arr_element(array, first_index, second_index = None):
+        if not second_index:
+            second_index = first_index + 1
+        if second_index == len(array):
+            return
+        # print('Trying to swap', array[first_index][1], first_index, second_index)
+        array[first_index], array[second_index] = array[second_index], array[first_index]
 
     for i, a in enumerate(arr):
-        if a[1].startswith('l-') or a[1].startswith('L-') and not on_left_side(i):
-            swap_arr_element(arr, i)
-            # print('Swap', a[1], i, i+1)
-        if a[1].startswith('r-') or a[1].startswith('R-') and on_left_side(i):
-            swap_arr_element(arr, i)
-            # print('Swap', a[1], i, i+1)
+        if is_left_handed(a) and not on_left_side(i):
+            # print("bad - ", a[1], f"left handed but on index {i} (right)")
+            for j, inner_a in enumerate(arr):
+              if not is_left_handed(inner_a) and on_left_side(j):
+                  # print(f"Swapping {a[1]} for {inner_a[1]} because {inner_a[1]} doesn't have to be on the left and is on the left")
+                  swap_arr_element(arr, i, j)
+                  break
+        if is_right_handed(a) and on_left_side(i):
+            # print("bad - ", a[1], f"right handed but on index {i} (left)")
+            for j, inner_a in enumerate(arr):
+              if not is_right_handed(inner_a) and not on_left_side(j):
+                  # print(f"Swapping {a[1]} for {inner_a[1]} because {inner_a[1]} doesn't have to be on the right and is on the right")
+                  swap_arr_element(arr, i, j)
+                  break
             
     return arr
 
@@ -131,6 +154,7 @@ def combineAssets(temp_dir, img_dir, opacity, page_width, page_height, dpi, star
     
     scrambled_arr = scrambled(arr_img_indexes)
     scrambled_arr = sortImgArrByHand(scrambled_arr, start_index=start_index)
+
     for i, page in enumerate(all_pdf_paths):
         animal_index = scrambled_arr[i][0]
 
@@ -162,12 +186,13 @@ def combineAssets(temp_dir, img_dir, opacity, page_width, page_height, dpi, star
             print('blank', i)
         page_img = page_img.convert('RGB')
         page_img = page_img.resize((page_width, page_height), resample=Image.LANCZOS)
-        final_path = '{final_dir}/{i}'.format(final_dir=final_dir, i=i)
+        final_path = '{temp_dir}/combine/{i}'.format(temp_dir=temp_pdf_dir, i=i)
         page_img.save(f'{final_path}.pdf', resolution=dpi, optimize=True)
 
 
 temp_pdf_dir = 'temp'
 final_dir = 'final'
+stamp_date = time.strftime("%Y%m%d-%H%M%S")
 
 def __main__():
     opacity = None
@@ -208,15 +233,13 @@ def __main__():
 
     if os.path.exists(temp_pdf_dir):
         shutil.rmtree(temp_pdf_dir)
-        os.mkdir(temp_pdf_dir)
+        os.makedirs(f'{temp_pdf_dir}/combine')
     else:
-        os.mkdir(temp_pdf_dir)
+        os.makedirs(f'{temp_pdf_dir}/combine')
 
-    if os.path.exists(final_dir):
-        shutil.rmtree(final_dir)
-        os.mkdir(final_dir)
-    else:
-        os.mkdir(final_dir)
+    # if not os.path.exists(final_dir):
+    os.makedirs(f'{final_dir}/{stamp_date}')
+    
 
     splitPDF(text_pdf, temp_pdf_dir)
     combineAssets(
