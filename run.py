@@ -13,7 +13,7 @@ from docx2pdf import convert
 import time
 
 
-def mergePdf():
+def mergePdf(stamp_date):
     filenames = [f for f in os.listdir(f'{temp_pdf_dir}/combine') if os.path.isfile(os.path.join(f'{temp_pdf_dir}/combine', f))]
 
     merger = PdfFileMerger()
@@ -192,7 +192,6 @@ def combineAssets(temp_dir, img_dir, opacity, page_width, page_height, dpi, star
 
 temp_pdf_dir = 'temp'
 final_dir = 'final'
-stamp_date = time.strftime("%Y%m%d-%H%M%S")
 
 def __main__():
     opacity = None
@@ -202,6 +201,7 @@ def __main__():
     page_height = 11.25
     dpi = 300
     start_hand = "right"
+    run_count = 1
     
     # get parameters from json
     with open('parameters.json') as f:
@@ -213,6 +213,7 @@ def __main__():
         page_height = parameters.get('page_height')
         dpi = parameters.get('dpi')
         start_hand = parameters.get('start_hand')
+        run_count = parameters.get('run_count')
 
     # px / dpi = inches
     page_pixel_w = int(page_width * dpi)
@@ -229,28 +230,33 @@ def __main__():
             print('Exception:', e)
 
     print(f'An opacity of {opacity} has been set.')
-    get_temp_dir = None
 
-    if os.path.exists(temp_pdf_dir):
-        shutil.rmtree(temp_pdf_dir)
-        os.makedirs(f'{temp_pdf_dir}/combine')
-    else:
-        os.makedirs(f'{temp_pdf_dir}/combine')
-
-    # if not os.path.exists(final_dir):
-    os.makedirs(f'{final_dir}/{stamp_date}')
+    def main_run():
+        stamp_date = time.strftime("%Y%m%d-%H%M%S")
+        
+        if os.path.exists(temp_pdf_dir):
+            shutil.rmtree(temp_pdf_dir)
+            os.makedirs(f'{temp_pdf_dir}/combine')
+        else:
+            os.makedirs(f'{temp_pdf_dir}/combine')
+            
+        os.makedirs(f'{final_dir}/{stamp_date}')
     
+        splitPDF(text_pdf, temp_pdf_dir)
+        combineAssets(
+          temp_dir=temp_pdf_dir,
+          img_dir=image_dir,
+          opacity=opacity,
+          page_width=page_pixel_w,
+          page_height=page_pixel_h,
+          dpi=dpi,
+          start_index=start_index)
+        mergePdf(stamp_date=stamp_date)
 
-    splitPDF(text_pdf, temp_pdf_dir)
-    combineAssets(
-      temp_dir=temp_pdf_dir,
-      img_dir=image_dir,
-      opacity=opacity,
-      page_width=page_pixel_w,
-      page_height=page_pixel_h,
-      dpi=dpi,
-      start_index=start_index)
-    mergePdf()
-
+    count = 0
+    print("run", run_count)
+    while count < run_count:
+        main_run()
+        count = count + 1
 
 __main__()
